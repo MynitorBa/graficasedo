@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador EDO de Segundo Orden - Administración de RAM</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .equation-display {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8fafc;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .parameter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .parameter-group label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .parameter-group input {
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .parameter-group input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+
+        .solution-display {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #0ea5e9;
+        }
+
+        .solution-display h2 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .equation {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            border-left: 4px solid #0ea5e9;
+        }
+
+        .chart-container {
+            margin-bottom: 40px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+        }
+
+        .chart-container h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #374151;
+            font-size: 1.3rem;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .verification-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .verification-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #f59e0b;
+        }
+
+        .verification-card h3 {
+            color: #374151;
+            margin-bottom: 15px;
+        }
+
+        .verification-card .result {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #7c3aed;
+            margin: 10px 0;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .info-box h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .eigenvalues {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .eigenvalue-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8b5cf6;
+            text-align: center;
+        }
+
+        .eigenvalue-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #7c3aed;
+            margin: 10px 0;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: #4f46e5;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f3f4f6;
+        }
+
+        .success {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .parameters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📐 EDO de Segundo Orden</h1>
+            <p>Modelado de Administración de RAM</p>
+            <div class="equation-display">
+                d²R/dt² + λ·dR/dt + ω²R = f(t)
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="calcularSolucion()">▶️ Calcular Solución</button>
+                <button class="btn btn-primary" onclick="resetearParametros()">🔄 Resetear</button>
+            </div>
+
+            <div class="parameters-grid">
+                <div class="parameter-group">
+                    <label for="R0">R₀ - RAM Total (GB)</label>
+                    <input type="number" id="R0" value="16" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="alpha">α - Llegada de tareas (tareas/min)</label>
+                    <input type="number" id="alpha" value="4" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="beta">β - Finalización (1/min)</label>
+                    <input type="number" id="beta" value="1.0" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="gamma">γ - Memoria por tarea (GB)</label>
+                    <input type="number" id="gamma" value="0.5" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="delta">δ - Garbage Collection (1/min)</label>
+                    <input type="number" id="delta" value="2.0" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="mu">μ - Fragmentación (1/min)</label>
+                    <input type="number" id="mu" value="0.1" step="0.01">
+                </div>
+                <div class="parameter-group">
+                    <label for="lambda">λ - Amortiguamiento (1/min)</label>
+                    <input type="number" id="lambda" value="3.0" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="R0_init">R(0) - RAM inicial (GB)</label>
+                    <input type="number" id="R0_init" value="10" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="v0">R'(0) - Velocidad inicial (GB/min)</label>
+                    <input type="number" id="v0" value="0" step="0.1">
+                </div>
+                <div class="parameter-group">
+                    <label for="T0">T(0) - Tareas iniciales</label>
+                    <input type="number" id="T0" value="8" step="1">
+                </div>
+            </div>
+
+            <div class="solution-display" id="solutionDisplay">
+                <h2>📝 Solución Analítica</h2>
+                <div id="solutionEquations"></div>
+            </div>
+
+            <div class="info-box">
+                <h3>🔍 Análisis de Valores Propios</h3>
+                <div class="eigenvalues" id="eigenvaluesDisplay"></div>
+            </div>
+
+            <div class="chart-container">
+                <h2>📈 R(t) - Memoria RAM Libre</h2>
+                <div class="chart-wrapper">
+                    <canvas id="chartR"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>⚡ R'(t) - Velocidad de Cambio</h2>
+                <div class="chart-wrapper">
+                    <canvas id="chartV"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>🚀 R''(t) - Aceleración</h2>
+                <div class="chart-wrapper">
+                    <canvas id="chartA"></canvas>
+                </div>
+            </div>
+
+
+            <div class="verification-grid" id="verificationCards">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
+            <div class="chart-container">
+                <h2>📊 Tabla de Valores</h2>
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>t (min)</th>
+                                <th>R(t) (GB)</th>
+                                <th>R'(t) (GB/min)</th>
+                                <th>R''(t) (GB/min²)</th>
+                                <th>T(t) (tareas)</th>
+                                <th>Verificación EDO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartR, chartV, chartA;
+        let datosSimulacion = [];
+
+        function obtenerParametros() {
+            return {
+                R0: parseFloat(document.getElementById('R0').value),
+                alpha: parseFloat(document.getElementById('alpha').value),
+                beta: parseFloat(document.getElementById('beta').value),
+                gamma: parseFloat(document.getElementById('gamma').value),
+                delta: parseFloat(document.getElementById('delta').value),
+                mu: parseFloat(document.getElementById('mu').value),
+                lambda: parseFloat(document.getElementById('lambda').value),
+                R0_init: parseFloat(document.getElementById('R0_init').value),
+                v0: parseFloat(document.getElementById('v0').value),
+                T0: parseFloat(document.getElementById('T0').value)
+            };
+        }
+
+        function resolverEDO(params) {
+            const { R0, alpha, beta, gamma, delta, mu, lambda: lamb, R0_init, v0, T0 } = params;
+            
+            const omega2 = delta + mu;
+            const omega = Math.sqrt(omega2);
+            
+            const discriminante = lamb * lamb - 4 * omega2;
+            const r1 = (-lamb + Math.sqrt(discriminante)) / 2;
+            const r2 = (-lamb - Math.sqrt(discriminante)) / 2;
+            
+            const Rp_const = (delta * R0 - alpha * gamma + beta * gamma * (alpha / beta)) / omega2;
+            const Rp_exp_coef = (2 * beta * gamma) / (1 + lamb + omega2);
+            
+            const suma_Rp0 = Rp_const + Rp_exp_coef;
+            const C1_plus_C2 = R0_init - suma_Rp0;
+            const r1_C1_plus_r2_C2 = v0 + Rp_exp_coef;
+            
+            const C2 = (r1_C1_plus_r2_C2 - r1 * C1_plus_C2) / (r2 - r1);
+            const C1 = C1_plus_C2 - C2;
+            
+            return {
+                omega2, omega, discriminante, r1, r2,
+                C1, C2, Rp_const, Rp_exp_coef,
+                Req: Rp_const
+            };
+        }
+
+        function calcularR(t, sol, params) {
+            const { C1, C2, r1, r2, Rp_const, Rp_exp_coef } = sol;
+            return C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t) + Rp_const + Rp_exp_coef * Math.exp(-t);
+        }
+
+        function calcularRprima(t, sol, params) {
+            const { C1, C2, r1, r2, Rp_exp_coef } = sol;
+            return r1 * C1 * Math.exp(r1 * t) + r2 * C2 * Math.exp(r2 * t) - Rp_exp_coef * Math.exp(-t);
+        }
+
+        function calcularRsegunda(t, sol, params) {
+            const { C1, C2, r1, r2, Rp_exp_coef } = sol;
+            return r1 * r1 * C1 * Math.exp(r1 * t) + r2 * r2 * C2 * Math.exp(r2 * t) + Rp_exp_coef * Math.exp(-t);
+        }
+
+        function calcularT(t, params) {
+            const { alpha, beta, T0 } = params;
+            return alpha / beta + (T0 - alpha / beta) * Math.exp(-beta * t);
+        }
+
+        function calcularFt(t, params) {
+            const { delta, R0, alpha, gamma, beta } = params;
+            const T = calcularT(t, params);
+            return delta * R0 - alpha * gamma + beta * gamma * T;
+        }
+
+        function calcularSolucion() {
+            const params = obtenerParametros();
+            const sol = resolverEDO(params);
+            
+            mostrarSolucion(sol, params);
+            
+            datosSimulacion = [];
+            const tMax = 10;
+            const dt = 0.05;
+            
+            for (let t = 0; t <= tMax; t += dt) {
+                const R = calcularR(t, sol, params);
+                const Rp = calcularRprima(t, sol, params);
+                const Rpp = calcularRsegunda(t, sol, params);
+                const T = calcularT(t, params);
+                const ft = calcularFt(t, params);
+                
+                const ladoIzq = Rpp + params.lambda * Rp + sol.omega2 * R;
+                const error = Math.abs(ladoIzq - ft);
+                
+                datosSimulacion.push({
+                    t: parseFloat(t.toFixed(3)),
+                    R: parseFloat(R.toFixed(4)),
+                    Rp: parseFloat(Rp.toFixed(4)),
+                    Rpp: parseFloat(Rpp.toFixed(4)),
+                    T: parseFloat(T.toFixed(4)),
+                    ft: parseFloat(ft.toFixed(4)),
+                    ladoIzq: parseFloat(ladoIzq.toFixed(4)),
+                    error: parseFloat(error.toFixed(6))
+                });
+            }
+            
+            actualizarGraficas();
+            actualizarTabla();
+            mostrarVerificacion(sol, params);
+        }
+
+        function mostrarSolucion(sol, params) {
+            const { C1, C2, r1, r2, Rp_const, Rp_exp_coef, omega, omega2, discriminante, Req } = sol;
+            
+            const tipo = discriminante > 0 ? 'Sobreamortiguado' : 
+                        discriminante === 0 ? 'Críticamente amortiguado' : 
+                        'Subamortiguado';
+            
+            const zeta = params.lambda / (2 * omega);
+            
+            document.getElementById('solutionEquations').innerHTML = `
+                <div class="equation">
+                    <strong>Ecuación Diferencial:</strong><br>
+                    d²R/dt² + ${params.lambda}·dR/dt + ${omega2.toFixed(3)}R = ${params.delta * params.R0} + 2e<sup>-t</sup>
+                </div>
+                <div class="equation">
+                    <strong>Solución Completa:</strong><br>
+                    R(t) = ${C1.toFixed(3)}e<sup>${r1.toFixed(4)}t</sup> + ${C2.toFixed(3)}e<sup>${r2.toFixed(4)}t</sup> + ${Rp_const.toFixed(3)} + ${Rp_exp_coef.toFixed(3)}e<sup>-t</sup>
+                </div>
+                <div class="equation">
+                    <strong>Equilibrio:</strong> R<sub>∞</sub> = ${Req.toFixed(3)} GB
+                </div>
+            `;
+            
+            document.getElementById('eigenvaluesDisplay').innerHTML = `
+                <div class="eigenvalue-card">
+                    <h4>ω (Frecuencia Natural)</h4>
+                    <div class="value">${omega.toFixed(4)}</div>
+                    <p>rad/min</p>
+                </div>
+                <div class="eigenvalue-card">
+                    <h4>r₁ (Raíz 1)</h4>
+                    <div class="value">${r1.toFixed(4)}</div>
+                    <p>τ₁ = ${(1/Math.abs(r1)).toFixed(3)} min</p>
+                </div>
+                <div class="eigenvalue-card">
+                    <h4>r₂ (Raíz 2)</h4>
+                    <div class="value">${r2.toFixed(4)}</div>
+                    <p>τ₂ = ${(1/Math.abs(r2)).toFixed(3)} min</p>
+                </div>
+                <div class="eigenvalue-card">
+                    <h4>ζ (Factor de Amortiguamiento)</h4>
+                    <div class="value">${zeta.toFixed(4)}</div>
+                    <p>${tipo}</p>
+                </div>
+            `;
+        }
+
+        function mostrarVerificacion(sol, params) {
+            const inicial = datosSimulacion[0];
+            const final = datosSimulacion[datosSimulacion.length - 1];
+            const maxError = Math.max(...datosSimulacion.map(d => d.error));
+            
+            document.getElementById('verificationCards').innerHTML = `
+                <div class="verification-card">
+                    <h3>✅ R(0) = ${params.R0_init} GB</h3>
+                    <div class="result">${inicial.R.toFixed(3)} GB</div>
+                    <p class="${Math.abs(inicial.R - params.R0_init) < 0.01 ? 'success' : 'error'}">
+                        Error: ${Math.abs(inicial.R - params.R0_init).toFixed(6)}
+                    </p>
+                </div>
+                <div class="verification-card">
+                    <h3>✅ R'(0) = ${params.v0} GB/min</h3>
+                    <div class="result">${inicial.Rp.toFixed(3)} GB/min</div>
+                    <p class="${Math.abs(inicial.Rp - params.v0) < 0.01 ? 'success' : 'error'}">
+                        Error: ${Math.abs(inicial.Rp - params.v0).toFixed(6)}
+                    </p>
+                </div>
+                <div class="verification-card">
+                    <h3>✅ R(∞) = ${sol.Req.toFixed(3)} GB</h3>
+                    <div class="result">${final.R.toFixed(3)} GB</div>
+                    <p class="${Math.abs(final.R - sol.Req) < 0.1 ? 'success' : 'error'}">
+                        Convergencia: ${((1 - Math.abs(final.R - sol.Req)/sol.Req) * 100).toFixed(2)}%
+                    </p>
+                </div>
+                <div class="verification-card">
+                    <h3>📊 Error Máximo EDO</h3>
+                    <div class="result">${maxError.toFixed(6)}</div>
+                    <p class="${maxError < 0.01 ? 'success' : 'error'}">
+                        ${maxError < 0.001 ? '¡Excelente!' : maxError < 0.01 ? 'Muy bueno' : 'Aceptable'}
+                    </p>
+                </div>
+            `;
+        }
+
+        function actualizarGraficas() {
+            const labels = datosSimulacion.map(d => d.t);
+            const dataR = datosSimulacion.map(d => d.R);
+            const dataRp = datosSimulacion.map(d => d.Rp);
+            const dataRpp = datosSimulacion.map(d => d.Rpp);
+            
+            if (chartR) chartR.destroy();
+            const ctxR = document.getElementById('chartR').getContext('2d');
+            chartR = new Chart(ctxR, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'R(t) - Memoria RAM Libre',
+                        data: dataR,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo (min)' } },
+                        y: { title: { display: true, text: 'Memoria (GB)' } }
+                    }
+                }
+            });
+            
+            if (chartV) chartV.destroy();
+            const ctxV = document.getElementById('chartV').getContext('2d');
+            chartV = new Chart(ctxV, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "R'(t) - Velocidad",
+                        data: dataRp,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo (min)' } },
+                        y: { title: { display: true, text: 'Velocidad (GB/min)' } }
+                    }
+                }
+            });
+            
+            if (chartA) chartA.destroy();
+            const ctxA = document.getElementById('chartA').getContext('2d');
+            chartA = new Chart(ctxA, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "R''(t) - Aceleración",
+                        data: dataRpp,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo (min)' } },
+                        y: { title: { display: true, text: 'Aceleración (GB/min²)' } }
+                    }
+                }
+            });
+            
+        }
+
+        function actualizarTabla() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            for (let i = 0; i < datosSimulacion.length; i += 20) {
+                const d = datosSimulacion[i];
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${d.t.toFixed(2)}</td>
+                    <td>${d.R.toFixed(3)}</td>
+                    <td>${d.Rp.toFixed(3)}</td>
+                    <td>${d.Rpp.toFixed(3)}</td>
+                    <td>${d.T.toFixed(2)}</td>
+                    <td class="${d.error < 0.01 ? 'success' : 'error'}">${d.error.toFixed(6)}</td>
+                `;
+            }
+        }
+
+        function resetearParametros() {
+            document.getElementById('R0').value = 16;
+            document.getElementById('alpha').value = 4;
+            document.getElementById('beta').value = 1.0;
+            document.getElementById('gamma').value = 0.5;
+            document.getElementById('delta').value = 2.0;
+            document.getElementById('mu').value = 0.1;
+            document.getElementById('lambda').value = 3.0;
+            document.getElementById('R0_init').value = 10;
+            document.getElementById('v0').value = 0;
+            document.getElementById('T0').value = 8;
+        }
+
+        window.addEventListener('load', function() {
+            calcularSolucion();
+        });
+    </script>
+</body>
+</html>
